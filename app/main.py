@@ -62,7 +62,7 @@ def main():
                         messages.append({
                             "role": "tool",
                             "tool_call_id": tool_call.id,
-                            "content": f.read()
+                            "content": str(f.read())
                         })
                 
         else:
