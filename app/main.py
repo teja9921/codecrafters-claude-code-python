@@ -51,6 +51,7 @@ def main():
 
     # TODO: Uncomment the following line to pass the first stage
     print(chat.choices[0].message.content)
+    print(chat.choices[0].message.tool_calls)
 
 
 if __name__ == "__main__":
