@@ -19,7 +19,7 @@ tools = [
                 "properties":
                 {
                     "file_path":{
-                        "type": "string"
+                        "type": "string",
                         "file_path": "the Path to file to read",
                     }
                 }
