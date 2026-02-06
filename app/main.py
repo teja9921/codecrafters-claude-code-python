@@ -125,13 +125,13 @@ def main():
                         messages.append({
                             "role": "tool",
                             "tool_id": tool_call.id,
-                            "content": result.stdout
+                            "content": str(result.stdout)
                         })
                     except subprocess.CalledProcessError as e:
                         messages.append({
                             "role": "tool",
                             "tool_id": tool_call.id,
-                            "content": result.stderr
+                            "content": str(result.stderr)
                         })
 
         else:
