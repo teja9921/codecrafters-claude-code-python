@@ -76,66 +76,66 @@ def main():
 
     client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
     messages = [{"role": "user", "content": args.p}]
+    
     while True:
         chat = client.chat.completions.create(
             model="anthropic/claude-haiku-4.5",
-            messages= messages,
-            tools= tools
+            messages=messages,
+            tools=tools
         )
-        if not chat.choices or len(chat.choices) == 0:
+
+        if not chat.choices:
             raise RuntimeError("no choices in response")
 
-        # You can use print statements as follows for debugging, they'll be visible when running tests.
-        print("Logs from your program will appear here!", file=sys.stderr)
         message = chat.choices[0].message
+        
+        # FIX 1: OpenRouter/Bedrock often requires 'content' to not be empty
+        msg_dict = message.model_dump(exclude_none=True)
+        if not msg_dict.get("content"):
+            msg_dict["content"] = None 
+        messages.append(msg_dict)
+
         if message.tool_calls:
-            messages.append(message.model_dump(exclude_none=True))
             for tool_call in message.tool_calls:
                 function_name = tool_call.function.name
                 arguments = json.loads(tool_call.function.arguments)
 
-                if function_name == "read_file":
-                    file_path= arguments["file_path"]
-                    with open(file_path, "r") as f:
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": str(f.read())
-                        })
+                # FIX 2: Added basic error handling to file operations so the script doesn't crash
+                try:
+                    if function_name == "read_file":
+                        with open(arguments["file_path"], "r") as f:
+                            result_content = f.read()
 
-                if function_name == "write_file":
-                    file_path = arguments["file_path"]
-                    content = arguments["content"]
-                    with open(file_path, "w") as f:
-                        f.write(str(content))
+                    elif function_name == "write_file":
+                        with open(arguments["file_path"], "w") as f:
+                            f.write(str(arguments["content"]))
+                        result_content = "File written successfully."
+
+                    elif function_name == "run_bash_command":
+                        try:
+                            res = subprocess.run(arguments["command"], check=True, capture_output=True, text=True, shell=True)
+                            result_content = res.stdout if res.stdout else "Command executed (no output)."
+                        except subprocess.CalledProcessError as e:
+                            # FIX 3: Use 'e.stderr' because 'result' isn't defined on failure
+                            result_content = e.stderr if e.stderr else f"Error code: {e.returncode}"
+
+                    # FIX 4: Critical key fix: 'tool_call_id', NOT 'tool_id'
                     messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": str(content)
-                        })
-                    
-                if function_name == "run_bash_command":
-                    command = arguments["command"]
-                    try: 
-                        # 'check=True' raises an error if the command fails
-                        # 'capture_output=True' grabs stdout and stderr
-                        # 'text=True' returns the output as a string instead of bytes
-
-                        result = subprocess.run(command, check=True, capture_output=True, text=True, shell=True)
-                        messages.append({
-                            "role": "tool",
-                            "tool_id": tool_call.id,
-                            "content": str(result.stdout)
-                        })
-                    except subprocess.CalledProcessError as e:
-                        messages.append({
-                            "role": "tool",
-                            "tool_id": tool_call.id,
-                            "content": str(result.stderr)
-                        })
-
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": str(result_content)
+                    })
+                except Exception as e:
+                    # Provide the error back to the AI so it can try to fix its mistake
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": f"Error executing tool: {str(e)}"
+                    })
         else:
-            print(message.content)
+            # Final output
+            if message.content:
+                print(message.content)
             break
 
 if __name__ == "__main__":
