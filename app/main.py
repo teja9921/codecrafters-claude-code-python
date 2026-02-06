@@ -45,6 +45,7 @@ def main():
             tools= tools
         )
 
+        print(chat.choices[0].message)
         if not chat.choices or len(chat.choices) == 0:
             raise RuntimeError("no choices in response")
 
