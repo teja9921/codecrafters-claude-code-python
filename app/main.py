@@ -44,8 +44,6 @@ def main():
             messages= messages,
             tools= tools
         )
-
-        print(chat.choices[0].message)
         if not chat.choices or len(chat.choices) == 0:
             raise RuntimeError("no choices in response")
 
@@ -53,8 +51,8 @@ def main():
         print("Logs from your program will appear here!", file=sys.stderr)
         message = chat.choices[0].message
         if message.tool_calls:
-            messages.append(message)
-            for tool_call in messages.tool_calls:
+            messages.append(message.model_dump(exclude_none=True))
+            for tool_call in message.tool_calls:
                 function_name = tool_call.function.name
                 arguments = json.loads(tool_call.function.arguments)
 
