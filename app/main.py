@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import subprocess
+from tqdm import tqdm
 from openai import OpenAI
 
 API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -96,7 +97,7 @@ def main():
         messages.append(msg_dict)
 
         if message.tool_calls:
-            for tool_call in message.tool_calls:
+            for tool_call in tqdm(message.tool_calls, desc="Exceuting Tools"):
                 function_name = tool_call.function.name
                 arguments = json.loads(tool_call.function.arguments)
 
