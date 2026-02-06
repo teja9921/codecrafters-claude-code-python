@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 import json
-
+import subprocess
 from openai import OpenAI
 
 API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -44,6 +44,23 @@ tools =[
                     }
                 },
                 "required": ["file_path", "content"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function":{
+            "name": "run_bash_command",
+            "description":"Execute a shell command",
+            "parameters":{
+                "type": "object",
+                "properties":{
+                    "command":{
+                        "type": "string",
+                        "description": "The command to execute"
+                    }
+                },
+                "required": ["command"]
             }
         }
     }
@@ -96,7 +113,27 @@ def main():
                             "tool_call_id": tool_call.id,
                             "content": str(content)
                         })
-                
+                    
+                if function_name == "run_bash_command":
+                    command = arguments["command"]
+                    try: 
+                        # 'check=True' raises an error if the command fails
+                        # 'capture_output=True' grabs stdout and stderr
+                        # 'text=True' returns the output as a string instead of bytes
+
+                        result = subprocess.run(command, check=True, capture_output=True, text=True, shell=True)
+                        messages.append({
+                            "role": "tool",
+                            "tool_id": tool_call.id,
+                            "content": result.stdout
+                        })
+                    except subprocess.CalledProcessError as e:
+                        messages.append({
+                            "role": "tool",
+                            "tool_id": tool_call.id,
+                            "content": result.stderr
+                        })
+
         else:
             print(message.content)
             break
