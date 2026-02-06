@@ -26,6 +26,27 @@ tools =[
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "description": "writes content to the file specified.",
+            "parameters":{
+                "type": "object",
+                "properties":{
+                    "file_path":{
+                        "type": "string",
+                        "description": "the path of the file to write to"
+                    },
+                    "content":{
+                        "type": "string",
+                        "description": "The content to write to the file"
+                    }
+                },
+                "required": ["file_path", "content"]
+            }
+        }
+    }
 ]
 
 def main():
@@ -63,6 +84,17 @@ def main():
                             "role": "tool",
                             "tool_call_id": tool_call.id,
                             "content": str(f.read())
+                        })
+
+                if function_name == "write_file":
+                    file_path = arguments["file_path"]
+                    content = arguments["content"]
+                    with open(file_path, "w") as f:
+                        f.write(str(content))
+                    messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": str(content)
                         })
                 
         else:
