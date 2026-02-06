@@ -37,31 +37,37 @@ def main():
         raise RuntimeError("OPENROUTER_API_KEY is not set")
 
     client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+    messages = [{"role": "user", "content": args.p}],
+    while True:
+        chat = client.chat.completions.create(
+            model="anthropic/claude-haiku-4.5",
+            messages= messages,
+            tools= tools
+        )
 
-    chat = client.chat.completions.create(
-        model="anthropic/claude-haiku-4.5",
-        messages=[{"role": "user", "content": args.p}],
-        tools= tools
-    )
+        if not chat.choices or len(chat.choices) == 0:
+            raise RuntimeError("no choices in response")
 
-    if not chat.choices or len(chat.choices) == 0:
-        raise RuntimeError("no choices in response")
+        # You can use print statements as follows for debugging, they'll be visible when running tests.
+        print("Logs from your program will appear here!", file=sys.stderr)
+        message = chat.choices[0].message
+        if message.tool_calls:
+            for tool_call in messages.tool_calls
+                function_name = tool_call.function.name
+                arguments = json.loads(tool_call.function.arguments)
 
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!", file=sys.stderr)
-    message = chat.choices[0].message
-    if message.tool_calls:
+                if function_name == "read_file":
+                    file_path= arguments["file_path"]
+                    with open(file_path, "r") as f:
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": f.read()
+                        })
+                
+        else:
+            print(message.content)
+            break
 
-        tool_call = message.tool_calls[0]
-        function_name = tool_call.function.name
-        arguments = json.loads(tool_call.function.arguments)
-
-        if function_name == "read_file":
-            file_path= arguments["file_path"]
-            with open(file_path, "r") as f:
-                print(f.read(), end="")
-        
-    else:
-        print(message.content)
 if __name__ == "__main__":
     main()
